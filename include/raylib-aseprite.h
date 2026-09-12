@@ -101,6 +101,7 @@ void DrawAsepriteProFlipped(Aseprite aseprite, int frame, Rectangle dest, Vector
 // Aseprite Tag functions
 AsepriteTag LoadAsepriteTag(Aseprite aseprite, const char* name);   // Load an Aseprite tag animation sequence
 AsepriteTag LoadAsepriteTagFromIndex(Aseprite aseprite, int index); // Load an Aseprite tag animation sequence from its index
+void PlayAsepriteTag(AsepriteTag* tag);                             // Play the tag animation sequence if it's paused
 int GetAsepriteTagCount(Aseprite aseprite);                         // Get the total amount of available tags
 bool IsAsepriteTagValid(AsepriteTag tag);                           // Check if the given Aseprite tag was loaded successfully
 void UpdateAsepriteTag(AsepriteTag* tag);                           // Update the tag animation frame
@@ -696,6 +697,16 @@ AsepriteTag LoadAsepriteTagFromIndex(Aseprite aseprite, int index) {
     TraceLog(LOG_TRACE, "ASEPRITE: [ID %i] Aseprite tag loaded successfully (%s)", index, tag.name);
 
     return tag;
+}
+
+/**
+ * Play the animation sequence of the given tag.
+ * Functionally t
+ *
+ * @param tag The Aseprite tag passed in by reference (&tag).
+ */
+void PlayAsepriteTag(AsepriteTag* tag) {
+    tag->paused = false;
 }
 
 /**
