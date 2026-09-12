@@ -61,6 +61,7 @@ typedef struct AsepriteTag {
     float timer;        // The countdown timer in seconds
     int direction;      // Whether we are moving forwards, or backwards through the frames
     float speed;        // The animation speed factor (1 is normal speed, 2 is double speed)
+    int repetitions;    // Number of times the animation has repeated if non-looping
     Color color;        // The color provided for the tag
     bool loop;          // Whether to continue to play the animation when the animation finishes
     bool paused;        // Set to true to not progression of the animation
@@ -184,6 +185,9 @@ Aseprite LoadAsepriteFromMemory(unsigned char* fileData, int size) {
     ase_t* ase = cute_aseprite_load_from_memory(fileData, (int)size, 0);
     if (ase == 0 || ase->frame_count == 0 || ase->w == 0 || ase->h == 0) {
         TraceLog(LOG_ERROR, "ASEPRITE: Failed to load Aseprite");
+        if (ase != 0) {
+            cute_aseprite_free(ase);
+        }
         return aseprite;
     }
 
@@ -488,7 +492,7 @@ void UpdateAsepriteTag(AsepriteTag* tag) {
     switch (aseTag->loop_animation_direction) {
         case ASE_ANIMATION_DIRECTION_FORWARD:
             if (tag->currentFrame > aseTag->to_frame) {
-                if (tag->loop) {
+                if (tag->loop || ++tag->repetitions <= tag->tag->repeat) {
                     tag->currentFrame = aseTag->from_frame;
                 } else {
                     tag->currentFrame = aseTag->to_frame;
@@ -498,7 +502,7 @@ void UpdateAsepriteTag(AsepriteTag* tag) {
         break;
         case ASE_ANIMATION_DIRECTION_REVERSE:
             if (tag->currentFrame < aseTag->from_frame) {
-                if (tag->loop) {
+                if (tag->loop || ++tag->repetitions <= tag->tag->repeat) {
                     tag->currentFrame = aseTag->to_frame;
                 } else {
                     tag->currentFrame = aseTag->from_frame;
@@ -511,7 +515,7 @@ void UpdateAsepriteTag(AsepriteTag* tag) {
             if (tag->direction > 0) {
                 if (tag->currentFrame > aseTag->to_frame) {
                     tag->direction = -1;
-                    if (tag->loop) {
+                    if (tag->loop || ++tag->repetitions <= tag->tag->repeat) {
                         tag->currentFrame = aseTag->to_frame - 1;
                     } else {
                         tag->currentFrame = aseTag->to_frame;
@@ -521,7 +525,7 @@ void UpdateAsepriteTag(AsepriteTag* tag) {
             } else {
                 if (tag->currentFrame < aseTag->from_frame) {
                     tag->direction = 1;
-                    if (tag->loop) {
+                    if (tag->loop || ++tag->repetitions <= tag->tag->repeat) {
                         tag->currentFrame = aseTag->from_frame + 1;
                     } else {
                         tag->currentFrame = aseTag->from_frame;
@@ -530,6 +534,10 @@ void UpdateAsepriteTag(AsepriteTag* tag) {
                 }
             }
         break;
+    }
+
+    if (!tag->loop && tag->repetitions == tag->tag->repeat) {
+        tag->repetitions = 0;
     }
 
     // Reset the timer.
@@ -544,6 +552,11 @@ void UpdateAsepriteTag(AsepriteTag* tag) {
  * @param frameNumber Which frame to set the active tag to. If negative, will start from the end.
  */
 void SetAsepriteTagFrame(AsepriteTag* tag, int frameNumber) {
+    if (tag == 0 || tag->tag == 0) {
+        TraceLog(LOG_WARNING, "ASEPRITE: Cannot set frame of empty tag");
+        return;
+    }
+
     // TODO: Need to attribute frame number for ASE_ANIMATION_DIRECTION_BACKWORDS?
     if (frameNumber >= 0) {
         tag->currentFrame = tag->tag->from_frame + frameNumber;
@@ -562,6 +575,11 @@ void SetAsepriteTagFrame(AsepriteTag* tag, int frameNumber) {
 }
 
 int GetAsepriteTagFrame(AsepriteTag tag) {
+    if (tag.tag == 0) {
+        TraceLog(LOG_WARNING, "ASEPRITE: Cannot get frame of empty tag");
+        return 0;
+    }
+
     // TODO: Need to attribute frame number for ASE_ANIMATION_DIRECTION_BACKWORDS?
     return tag.currentFrame - tag.tag->from_frame;
 }
@@ -757,7 +775,7 @@ AsepriteSlice LoadAsepriteSliceFromIndex(Aseprite aseprite, int index) {
         TraceLog(LOG_WARNING, "ASEPRITE: Cannot load slice index from empty aseprite");
         return GenAsepriteSliceDefault();
     }
-    if (index < aseprite.ase->slice_count) {
+    if (index >= 0 && index < aseprite.ase->slice_count) {
         AsepriteSlice output;
         ase_slice_t* slice = &aseprite.ase->slices[index];
         output.bounds.x = (float)slice->origin_x;
@@ -776,7 +794,7 @@ AsepriteSlice LoadAsepriteSliceFromIndex(Aseprite aseprite, int index) {
  */
 AsepriteSlice GenAsepriteSliceDefault() {
     AsepriteSlice slice;
-    slice.name = "";
+    slice.name = (char*)"";
     slice.bounds = (Rectangle){0, 0, 0, 0};
     return slice;
 }
