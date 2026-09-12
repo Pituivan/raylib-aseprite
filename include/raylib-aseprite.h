@@ -61,6 +61,7 @@ typedef struct AsepriteTag {
     float timer;        // The countdown timer in seconds
     int direction;      // Whether we are moving forwards, or backwards through the frames
     float speed;        // The animation speed factor (1 is normal speed, 2 is double speed)
+    int repetitions;    // Number of times the animation has repeated if non-looping
     Color color;        // The color provided for the tag
     bool loop;          // Whether to continue to play the animation when the animation finishes
     bool paused;        // Set to true to not progression of the animation
@@ -100,6 +101,7 @@ void DrawAsepriteProFlipped(Aseprite aseprite, int frame, Rectangle dest, Vector
 // Aseprite Tag functions
 AsepriteTag LoadAsepriteTag(Aseprite aseprite, const char* name);   // Load an Aseprite tag animation sequence
 AsepriteTag LoadAsepriteTagFromIndex(Aseprite aseprite, int index); // Load an Aseprite tag animation sequence from its index
+void PlayAsepriteTag(AsepriteTag* tag);                             // Play the tag animation sequence if it's paused
 int GetAsepriteTagCount(Aseprite aseprite);                         // Get the total amount of available tags
 bool IsAsepriteTagValid(AsepriteTag tag);                           // Check if the given Aseprite tag was loaded successfully
 void UpdateAsepriteTag(AsepriteTag* tag);                           // Update the tag animation frame
@@ -489,45 +491,50 @@ void UpdateAsepriteTag(AsepriteTag* tag) {
     // Advance the frame and see if it's time to reset the position.
     tag->currentFrame += tag->direction;
     switch (aseTag->loop_animation_direction) {
-        case ASE_ANIMATION_DIRECTION_FORWARDS:
+        case ASE_ANIMATION_DIRECTION_FORWARD:
             if (tag->currentFrame > aseTag->to_frame) {
-                if (tag->loop) {
+                if (tag->loop || ++tag->repetitions <= tag->tag->repeat) {
                     tag->currentFrame = aseTag->from_frame;
                 } else {
                     tag->currentFrame = aseTag->to_frame;
                     tag->paused = true;
+                    tag->repetitions = 0;
                 }
             }
         break;
-        case ASE_ANIMATION_DIRECTION_BACKWORDS:
+        case ASE_ANIMATION_DIRECTION_REVERSE:
             if (tag->currentFrame < aseTag->from_frame) {
-                if (tag->loop) {
+                if (tag->loop || ++tag->repetitions <= tag->tag->repeat) {
                     tag->currentFrame = aseTag->to_frame;
                 } else {
                     tag->currentFrame = aseTag->from_frame;
                     tag->paused = true;
+                    tag->repetitions = 0;
                 }
             }
         break;
         case ASE_ANIMATION_DIRECTION_PINGPONG:
+        case ASE_ANIMATION_DIRECTION_PINGPONG_REVERSE:
             if (tag->direction > 0) {
                 if (tag->currentFrame > aseTag->to_frame) {
                     tag->direction = -1;
-                    if (tag->loop) {
+                    if (tag->loop || ++tag->repetitions <= tag->tag->repeat) {
                         tag->currentFrame = aseTag->to_frame - 1;
                     } else {
                         tag->currentFrame = aseTag->to_frame;
                         tag->paused = true;
+                        tag->repetitions = 0;
                     }
                 }
             } else {
                 if (tag->currentFrame < aseTag->from_frame) {
                     tag->direction = 1;
-                    if (tag->loop) {
+                    if (tag->loop || ++tag->repetitions <= tag->tag->repeat) {
                         tag->currentFrame = aseTag->from_frame + 1;
                     } else {
                         tag->currentFrame = aseTag->from_frame;
                         tag->paused = true;
+                        tag->repetitions = 0;
                     }
                 }
             }
@@ -664,7 +671,8 @@ AsepriteTag LoadAsepriteTagFromIndex(Aseprite aseprite, int index) {
     // Set up the frame range
     tag.direction = 1;
     tag.currentFrame = tag.tag->from_frame;
-    if (tag.tag->loop_animation_direction == ASE_ANIMATION_DIRECTION_BACKWORDS) {
+    if (tag.tag->loop_animation_direction == ASE_ANIMATION_DIRECTION_REVERSE ||
+            tag.tag->loop_animation_direction == ASE_ANIMATION_DIRECTION_PINGPONG_REVERSE) {
         tag.currentFrame = tag.tag->to_frame;
         tag.direction = -1;
     }
@@ -689,6 +697,16 @@ AsepriteTag LoadAsepriteTagFromIndex(Aseprite aseprite, int index) {
     TraceLog(LOG_TRACE, "ASEPRITE: [ID %i] Aseprite tag loaded successfully (%s)", index, tag.name);
 
     return tag;
+}
+
+/**
+ * Play the animation sequence of the given tag.
+ * Functionally t
+ *
+ * @param tag The Aseprite tag passed in by reference (&tag).
+ */
+void PlayAsepriteTag(AsepriteTag* tag) {
+    tag->paused = false;
 }
 
 /**
