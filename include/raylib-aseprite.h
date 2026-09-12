@@ -61,6 +61,7 @@ typedef struct AsepriteTag {
     float timer;        // The countdown timer in seconds
     int direction;      // Whether we are moving forwards, or backwards through the frames
     float speed;        // The animation speed factor (1 is normal speed, 2 is double speed)
+    int repetitions;    // Number of times the animation has repeated if non-looping
     Color color;        // The color provided for the tag
     bool loop;          // Whether to continue to play the animation when the animation finishes
     bool paused;        // Set to true to not progression of the animation
@@ -491,7 +492,7 @@ void UpdateAsepriteTag(AsepriteTag* tag) {
     switch (aseTag->loop_animation_direction) {
         case ASE_ANIMATION_DIRECTION_FORWARD:
             if (tag->currentFrame > aseTag->to_frame) {
-                if (tag->loop) {
+                if (tag->loop || ++tag->repetitions <= tag->tag->repeat) {
                     tag->currentFrame = aseTag->from_frame;
                 } else {
                     tag->currentFrame = aseTag->to_frame;
@@ -501,7 +502,7 @@ void UpdateAsepriteTag(AsepriteTag* tag) {
         break;
         case ASE_ANIMATION_DIRECTION_REVERSE:
             if (tag->currentFrame < aseTag->from_frame) {
-                if (tag->loop) {
+                if (tag->loop || ++tag->repetitions <= tag->tag->repeat) {
                     tag->currentFrame = aseTag->to_frame;
                 } else {
                     tag->currentFrame = aseTag->from_frame;
@@ -514,7 +515,7 @@ void UpdateAsepriteTag(AsepriteTag* tag) {
             if (tag->direction > 0) {
                 if (tag->currentFrame > aseTag->to_frame) {
                     tag->direction = -1;
-                    if (tag->loop) {
+                    if (tag->loop || ++tag->repetitions <= tag->tag->repeat) {
                         tag->currentFrame = aseTag->to_frame - 1;
                     } else {
                         tag->currentFrame = aseTag->to_frame;
@@ -524,7 +525,7 @@ void UpdateAsepriteTag(AsepriteTag* tag) {
             } else {
                 if (tag->currentFrame < aseTag->from_frame) {
                     tag->direction = 1;
-                    if (tag->loop) {
+                    if (tag->loop || ++tag->repetitions <= tag->tag->repeat) {
                         tag->currentFrame = aseTag->from_frame + 1;
                     } else {
                         tag->currentFrame = aseTag->from_frame;
@@ -533,6 +534,10 @@ void UpdateAsepriteTag(AsepriteTag* tag) {
                 }
             }
         break;
+    }
+
+    if (!tag->loop && tag->repetitions == tag->tag->repeat) {
+        tag->repetitions = 0;
     }
 
     // Reset the timer.
