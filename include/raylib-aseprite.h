@@ -498,6 +498,7 @@ void UpdateAsepriteTag(AsepriteTag* tag) {
                 } else {
                     tag->currentFrame = aseTag->to_frame;
                     tag->paused = true;
+                    tag->repetitions = 0;
                 }
             }
         break;
@@ -508,6 +509,7 @@ void UpdateAsepriteTag(AsepriteTag* tag) {
                 } else {
                     tag->currentFrame = aseTag->from_frame;
                     tag->paused = true;
+                    tag->repetitions = 0;
                 }
             }
         break;
@@ -521,6 +523,7 @@ void UpdateAsepriteTag(AsepriteTag* tag) {
                     } else {
                         tag->currentFrame = aseTag->to_frame;
                         tag->paused = true;
+                        tag->repetitions = 0;
                     }
                 }
             } else {
@@ -531,14 +534,11 @@ void UpdateAsepriteTag(AsepriteTag* tag) {
                     } else {
                         tag->currentFrame = aseTag->from_frame;
                         tag->paused = true;
+                        tag->repetitions = 0;
                     }
                 }
             }
         break;
-    }
-
-    if (!tag->loop && tag->repetitions == tag->tag->repeat) {
-        tag->repetitions = 0;
     }
 
     // Reset the timer.
